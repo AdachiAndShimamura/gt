@@ -3,18 +3,31 @@ $WEBRTC_DIR="$WORK_DIR/libcs/dep/_google-webrtc"
 $MSQUIC_DIR="$WORK_DIR/libcs/dep/_msquic"
 $WEBRTC_OUT_DIR="$WEBRTC_DIR/src/out/release/obj"
 $MSQUIC_OUT_DIR="$MSQUIC_DIR/build/windows/x64_schannel/obj/Release"
-$MSVC_BUILD_DIR="$WORK_DIR/libcs/msvc-build"
 
 $env:CC="clang"
 $env:CXX="clang++"
 $env:CXXFLAGS="-I$WEBRTC_DIR/src -I$WEBRTC_DIR/src/third_party/abseil-cpp -I$MSQUIC_DIR/src/inc -std=c++17 -DWEBRTC_WIN -DQUIC_API_ENABLE_PREVIEW_FEATURES -DNOMINMAX"
 $env:CGO_LDFLAGS="-L$MSQUIC_DIR/build/windows/x64_schannel/obj/Release -L$WEBRTC_DIR/src/out/release/obj -lmsquic.lib -lwebrtc.lib"
 $env:CARGO_CFG_TARGET_OS="windows"
+$env:RUSTFLAGS="-L $MSQUIC_OUT_DIR -l msquic -L $WEBRTC_OUT_DIR -l webrtc"
 
 $env:DEPOT_TOOLS_WIN_TOOLCHAIN="0"
 $env:GYP_GENERATORS="msvs-ninja,ninja"
 $env:GYP_MSVS_OVERRIDE_PATH="C:\Program Files\Microsoft Visual Studio\2022\Community"
 $env:GYP_MSVS_VERSION="2022"
+
+# 检查 Pscx 模块是否已安装
+if (-not (Get-Module -Name Pscx -ListAvailable)) {
+    Write-Host "安装Pscx PowerShell插件"
+    Install-Module -Name Pscx -AllowPrerelease -Force
+}
+
+# 检查 VSSetup 模块是否已安装
+if (-not (Get-Module -Name VSSetup -ListAvailable)) {
+    Write-Host "安装VSSetup PowerShell插件"
+    Install-Module -Name VSSetup -AllowPrerelease -Force
+}
+Import-VisualStudioVars 2022 amd64
 
 Set-Location $WORK_DIR
 function complie_webrtc{
@@ -51,38 +64,17 @@ function complie_msquic{
 }
 
 
-function release_gt_dylib{
+function release_gt_lib{
     Set-Location "$WORK_DIR/libcs"
     Write-Host "开始编译gt server/client"
-    go build -tags release -trimpath -ldflags "-s -w"  -buildmode=c-archive -o release/gt.lib ./lib/export
-    if (Test-Path -Path "./release/gt.lib")
+    go build -tags release -trimpath -ldflags "-s -w"  -buildmode=c-archive -o release/windows/gt.lib ./lib/export
+    if (Test-Path -Path "./release/windows/gt.lib")
     {
         Write-Host "gt server/client编译完成"
     }
     else
     {
         Write-Host "gt server/client编译失败"
-        Set-Location $WORK_DIR
-        exit
-    }
-    Set-Location ./msvc-build
-
-    $directory = "$WORK_DIR/libcs/msvc-build/target"
-    if (-not (Test-Path -Path $directory -PathType Container)) {
-        New-Item -Path $directory -ItemType Directory -Force
-        Write-Host "目录已创建：$directory"
-    } else {
-        Write-Host "目录已存在：$directory"
-    }
-    Write-Host "开始编译发布gt server/client动态库"
-    cl /LD /MT /Fe:$MSVC_BUILD_DIR/gt.dll gt.cpp /link /DEF:gt.def  "../release/gt.lib" "$MSQUIC_OUT_DIR/msquic.lib" "$WEBRTC_OUT_DIR/webrtc.lib" ntdll.lib
-    if (Test-Path -Path "$MSVC_BUILD_DIR/gt.dll")
-    {
-        Write-Host "动态库编译完成"
-    }
-    else
-    {
-        Write-Host "动态库编译失败"
         Set-Location $WORK_DIR
         exit
     }
@@ -102,5 +94,5 @@ if (!(Test-Path -Path "$WEBRTC_OUT_DIR/webrtc.lib")){
 if (!(Test-Path -Path "$MSQUIC_OUT_DIR/msquic.lib")){
     complie_msquic
 }
-release_gt_dylib
+release_gt_lib
 release_gt_exe

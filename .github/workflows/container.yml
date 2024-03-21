@@ -21,14 +21,127 @@ env:
 
 jobs:
 
-  build:
-    runs-on: ubuntu-latest
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      
+
+    steps:
+    - name:  Configure Environment
+      shell: powershell
+      run: |-
+        Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled' -Value 1
+        git config --system core.longpaths true
+        
+        echo "--------------------Install Microsoft.UI.Xaml-------------------"
+        $SourceUrl = "https://www.nuget.org/api/v2/package/Microsoft.UI.Xaml/2.7.3"
+        $DestinationFile = ".\microsoft.ui.xaml.2.7.3.zip" # 保存到当前目录并保持.nupkg扩展名
+        $ExtractDirectory = ".\uixaml"
+        # 创建目标解压目录（如果不存在）
+        if (!(Test-Path -Path $ExtractDirectory)) {
+            New-Item -ItemType Directory -Path $ExtractDirectory | Out-Null
+        }
+        # 下载.nupkg文件
+        Invoke-WebRequest -Uri $SourceUrl -OutFile $DestinationFile
+        # 解压.nupkg文件到指定目录（PowerShell 5.0及以上版本支持）
+        Expand-Archive -Path $DestinationFile -DestinationPath $ExtractDirectory
+        Copy-Item -Path .\uixaml\tools\AppX\x64\Release\Microsoft.UI.Xaml.2.7.appx -Destination .
+        Add-AppxPackage -Path .\Microsoft.UI.Xaml.2.7.appx
+
+        echo "------------------------Install vclibs--------------------------"
+        Invoke-WebRequest -Uri 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx' -OutFile '.\Microsoft.VCLibs.x64.14.00.Desktop.appx'
+        Add-AppxPackage -Path .\Microsoft.VCLibs.x64.14.00.Desktop.appx
+
+        echo "---------------------Install winget------------------------"
+        Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/download/v1.6.3421/65f132d72c1d44518a19d1a9c3de8e1f_License1.xml' -OutFile '.\65f132d72c1d44518a19d1a9c3de8e1f_License1.xml'
+        Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/download/v1.6.3421/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -OutFile '.\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' 
+        Add-AppxPackage .\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+        Add-AppxProvisionedPackage -Online -Package .\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle -LicensePath  .\65f132d72c1d44518a19d1a9c3de8e1f_License1.xml
+        
+        echo "---------------Install VisualStudio 2022---------------------- "
+        winget install --source winget --id Microsoft.VisualStudio.2022.Community --override "--quiet --add Microsoft.VisualStudio.Component.CoreEditor --add Microsoft.VisualStudio.Workload.CoreEditor --add Microsoft.VisualStudio.Component.TypeScript.TSServer --add Microsoft.VisualStudio.ComponentGroup.WebToolsExtensions --add Microsoft.VisualStudio.Component.JavaScript.TypeScript --add Microsoft.VisualStudio.Component.Roslyn.Compiler --add Microsoft.Component.MSBuild --add Microsoft.VisualStudio.Component.Roslyn.LanguageServices --add Microsoft.VisualStudio.Component.TextTemplating --add Microsoft.VisualStudio.Component.NuGet --add Microsoft.VisualStudio.Component.Debugger.JustInTime --add Component.Microsoft.VisualStudio.LiveShare.2022 --add Microsoft.VisualStudio.Component.IntelliCode --add Microsoft.VisualStudio.Component.VC.CoreIde --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Graphics.Tools --add Microsoft.VisualStudio.Component.VC.DiagnosticTools --add Microsoft.VisualStudio.Component.Windows11SDK.22621 --add Microsoft.VisualStudio.Component.VC.ATL --add Microsoft.VisualStudio.Component.SecurityIssueAnalysis --add Microsoft.VisualStudio.Component.VC.ATLMFC --add Microsoft.VisualStudio.Component.VC.Modules.x86.x64 --add Component.IncredibuildMenu --add Component.Incredibuild --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core --add Microsoft.VisualStudio.Component.Windows11Sdk.WindowsPerformanceToolkit --add Microsoft.VisualStudio.Component.CppBuildInsights --add Microsoft.VisualStudio.ComponentGroup.WebToolsExtensions.CMake --add Microsoft.VisualStudio.Component.VC.CMake.Project --add Microsoft.VisualStudio.Component.VC.TestAdapterForBoostTest --add Microsoft.VisualStudio.Component.VC.TestAdapterForGoogleTest --add Microsoft.VisualStudio.Component.VC.ASAN --add Microsoft.VisualStudio.Component.Vcpkg --add Microsoft.VisualStudio.Component.VC.Llvm.ClangToolset --add Microsoft.VisualStudio.Component.VC.Llvm.Clang --add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Llvm.Clang --add Microsoft.VisualStudio.Workload.NativeDesktop"
+        winget install --source winget --id Microsoft.VisualStudio.2022.Community --override "--quiet --add Microsoft.VisualStudio.Component.CoreEditor --add Microsoft.VisualStudio.Workload.CoreEditor --add Microsoft.VisualStudio.Component.TypeScript.TSServer --add Microsoft.VisualStudio.ComponentGroup.WebToolsExtensions --add Microsoft.VisualStudio.Component.JavaScript.TypeScript --add Microsoft.VisualStudio.Component.Roslyn.Compiler --add Microsoft.Component.MSBuild --add Microsoft.VisualStudio.Component.Roslyn.LanguageServices --add Microsoft.VisualStudio.Component.TextTemplating --add Microsoft.VisualStudio.Component.NuGet --add Microsoft.VisualStudio.Component.Debugger.JustInTime --add Component.Microsoft.VisualStudio.LiveShare.2022 --add Microsoft.VisualStudio.Component.IntelliCode --add Microsoft.VisualStudio.Component.VC.CoreIde --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Graphics.Tools --add Microsoft.VisualStudio.Component.VC.DiagnosticTools --add Microsoft.VisualStudio.Component.Windows11SDK.22621 --add Microsoft.VisualStudio.Component.VC.ATL --add Microsoft.VisualStudio.Component.SecurityIssueAnalysis --add Microsoft.VisualStudio.Component.VC.ATLMFC --add Microsoft.VisualStudio.Component.VC.Modules.x86.x64 --add Component.IncredibuildMenu --add Component.Incredibuild --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest --add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core --add Microsoft.VisualStudio.Component.Windows11Sdk.WindowsPerformanceToolkit --add Microsoft.VisualStudio.Component.CppBuildInsights --add Microsoft.VisualStudio.ComponentGroup.WebToolsExtensions.CMake --add Microsoft.VisualStudio.Component.VC.CMake.Project --add Microsoft.VisualStudio.Component.VC.TestAdapterForBoostTest --add Microsoft.VisualStudio.Component.VC.TestAdapterForGoogleTest --add Microsoft.VisualStudio.Component.VC.ASAN --add Microsoft.VisualStudio.Component.Vcpkg --add Microsoft.VisualStudio.Component.VC.Llvm.ClangToolset --add Microsoft.VisualStudio.Component.VC.Llvm.Clang --add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Llvm.Clang --add Microsoft.VisualStudio.Workload.NativeDesktop"
+
+
+        echo "----------------------Install sdk 8-------------------------------"
+        winget install --source winget --id Microsoft.DotNet.SDK.8 
+        
+        echo "----------------------Install DesktopRuntime.8--------------------------"
+        winget install --source winget --id Microsoft.DotNet.DesktopRuntime.8 
+        
+        echo "---------------------Install cmake--------------------------"
+        winget install --source winget --id Kitware.CMake  -e
+
+        echo "--------------------Install Ninja-build.Ninja ---------------------------"
+        winget install --source winget --id  Ninja-build.Ninja 
+
+        echo "--------------------Waiting Install VisualStudio 2022--------------------------------- "
+        # 循环判断目录数量是否大于等于 14
+        $targetDirectory = "C:\Program Files\Microsoft Visual Studio\2022\Community"
+        while (!(Test-Path $targetDirectory)) {
+            Write-Host "The directory does not exist, wait for 1 minute..."
+            Start-Sleep -Seconds 60
+        }
+        while (((Get-ChildItem -Path $targetDirectory -Directory).Count -lt 14)) {
+            Write-Host "The number of directories is less than 14, wait for 1 minute...."
+            Start-Sleep -Seconds 60
+        }
+        Get-ChildItem -Path  $targetDirectory
+        Write-Host "-------------------------Visual Studio 2022 installation completed----------------------------"
+
+       
+
+
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+  
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 'stable'
+
+   
+    - name: Building Windows Package
+      shell: pwsh
+      run: |-
+        Rename-Item -Path 'D:\a\gt\gt\libcs\dep\_google-webrtc\src\third_party\llvm-build\Release+Asserts.win'   -NewName  'D:\a\gt\gt\libcs\dep\_google-webrtc\src\third_party\llvm-build\Release+Asserts' 
+        Get-ChildItem -Path 'D:\a\gt\gt\libcs\dep\_google-webrtc\src\third_party\llvm-build\'
+        Get-ChildItem -Path 'D:\a\gt\gt\libcs\dep\_google-webrtc\src\third_party\llvm-build\Release+Asserts\'
+        Invoke-WebRequest -Uri 'https://chrome-infra-packages.appspot.com/dl/gn/gn/windows-amd64/+/latest' -OutFile '.\gn-windows-amd64.zip'
+        Expand-Archive -Path '.\gn-windows-amd64.zip' -DestinationPath 'C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja'
+        Get-ChildItem -Path 'C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\'
+
+        echo "-----------------------Compilation package---------------------"
+        & '.\build.ps1'
+
+    - name: Archive GT artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: gt-windows
+        path: |
+          release/*
+
+
+  build-linux:
+    runs-on: ubuntu-22.04
     permissions:
       contents: read
       packages: write
       id-token: write
 
     steps:
+    - name: clean-space
+      run: |-
+        sudo swapoff -a
+        sudo rm -rf /swapfile /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        sudo apt clean
+        sudo df -Th
+    # steps:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
@@ -38,37 +151,20 @@ jobs:
       with:
         go-version: 'stable'
 
-    - name: package-server
+    - name: package-gt
       run: |-
-        sudo apt-get update && sudo apt-get install make git gn ninja-build python3 python3-pip libgtk-3-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu gcc-x86-64-linux-gnu g++-x86-64-linux-gnu gcc-riscv64-linux-gnu g++-riscv64-linux-gnu rustc -y
+        sudo apt-get update && sudo apt-get install make git gn ninja-build python3 python3-pip libgtk-3-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu gcc-x86-64-linux-gnu g++-x86-64-linux-gnu gcc-riscv64-linux-gnu g++-riscv64-linux-gnu rustc upx -y
         rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu riscv64gc-unknown-linux-gnu
-        GOARCH=amd64 make release_server && mv release/linux-amd64-server release/linux-x86_64-server
-        TARGET=aarch64-linux-gnu GOOS=linux GOARCH=arm64 make release_server && mv release/linux-arm64-server release/linux-aarch64-server
-        TARGET=riscv64-linux-gnu GOOS=linux GOARCH=riscv64 make release_server
-        ls -al release
+        make
 
-    - name: package-client
-      run: |-
-        sudo apt-get update && sudo apt-get install make git gn ninja-build python3 python3-pip libgtk-3-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu gcc-x86-64-linux-gnu g++-x86-64-linux-gnu gcc-riscv64-linux-gnu g++-riscv64-linux-gnu rustc -y
-        rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu riscv64gc-unknown-linux-gnu
-        GOARCH=amd64 make release_client && mv release/linux-amd64-client release/linux-x86_64-client
-        TARGET=aarch64-linux-gnu GOOS=linux GOARCH=arm64 make release_client && mv release/linux-arm64-client release/linux-aarch64-client
-        TARGET=riscv64-linux-gnu GOOS=linux GOARCH=riscv64 make release_client
-        ls -al release
-
-    - name: Archive Server artifacts
+    - name: Archive GT artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: gt-server
+        name: gt-linux
         path: |
-          release/*-server
-    
-    - name: Archive Client artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: gt-client
-        path: |
-          release/*-client
+          release/*
+    - name: clean-space
+      run: sudo rm -rf /home/runner/work/gt/gt/libcs/dep
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v2
@@ -277,3 +373,104 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         file: Dockerfile-client
+
+  build-macos-x86_64:
+    runs-on: macos-13
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+      
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+  
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 'stable'
+
+    - name: package-gt
+      run: |-
+        sudo mkdir -pv /opt/homebrew/opt
+        brew install make  llvm@16 binutils  ninja
+        pip3 install --upgrade setuptools
+        curl -LOJ https://chrome-infra-packages.appspot.com/dl/gn/gn/mac-amd64/+/latest
+        unzip gn-mac-amd64.zip
+        chmod +x gn && mv gn /usr/local/opt/llvm@16/bin/
+        sudo ln -s /usr/local/opt/llvm@16 /opt/homebrew/opt/llvm
+        ln -s /usr/local/opt/llvm@16 /usr/local/opt/llvm
+        echo 'export PATH="/usr/local/opt/llvm@16/bin:$PATH"' >> ~/.bash_profile
+        export PATH="/usr/local/opt/make/libexec/gnubin:$PATH"
+        echo 'export PATH="/usr/local/opt/binutils/bin:$PATH"' >> ~/.bash_profile
+        source ~/.bash_profile
+        mv /usr/local/opt/llvm/bin/llvm-libtool-darwin /usr/local/opt/llvm/bin/libtool
+        rustup target add x86_64-apple-darwin aarch64-apple-darwin
+        cd ./libcs && TARGET=x86_64-apple-darwin GOOS=darwin GOARCH=amd64 arch -arch x86_64 make release_lib
+        cargo build --target x86_64-apple-darwin -r
+        cd ..
+        mkdir -p release
+        cp target/x86_64-apple-darwin/release/gt release/gt-macos-x86_64
+
+    - name: Archive GT artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: gt-macos-x86_64
+        path: |
+          release/*
+
+  build-macos-arm64:
+    runs-on: macos-14
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    # steps:
+    #   - name: space
+    #     shell: bash
+    #     run: |-
+    #       sudo df -h
+          
+      
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+  
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 'stable'
+
+    - name: package-gt
+      run: |-
+        brew install make  llvm@16 binutils  ninja
+        curl -LOJ https://chrome-infra-packages.appspot.com/dl/gn/gn/mac-amd64/+/latest
+        unzip gn-mac-amd64.zip
+        chmod +x gn && mv gn /opt/homebrew/opt/llvm@16/bin/
+        ln -s /opt/homebrew/opt/llvm@16 /opt/homebrew/opt/llvm
+        echo 'export PATH="/opt/homebrew/opt/llvm/bin:$PATH"' >> ~/.bash_profile
+        export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+        echo 'export PATH="/opt/homebrew/opt/binutils/bin:$PATH"' >> ~/.bash_profile
+        source ~/.bash_profile
+        mv /opt/homebrew/opt/llvm/bin/llvm-libtool-darwin /opt/homebrew/opt/llvm/bin/libtool
+        rustup target add x86_64-apple-darwin aarch64-apple-darwin
+        cd ./libcs &&  TARGET=aarch64-apple-darwin GOOS=darwin GOARCH=arm64 arch -arch arm64 make release_lib
+        cargo build --target aarch64-apple-darwin -r
+        cd ..
+        mkdir -p release
+        cp target/aarch64-apple-darwin/release/gt release/gt-macos-aarch64
+
+    - name: Archive GT artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: gt-macos-aarch64
+        path: |
+          release/*

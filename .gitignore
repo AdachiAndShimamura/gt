@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-build
-release
+/libcs/build
+/libcs/release
+/libcs/dep/_msquic/out
+/libcs/dep/_google-webrtc/src/out
+/target/
 .dockerignore
 .DS_Store
 # IDE files
@@ -50,3 +53,5 @@ web/front/*.sw?
 # dist
 server/web/dist
 client/web/dist
+
+/libcs/msvc-build/target
